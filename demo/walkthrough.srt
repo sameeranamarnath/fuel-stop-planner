@@ -1,0 +1,66 @@
+1
+00:00:00,000 --> 00:00:08,000
+This is the Spotter fuel route planner.
+A Django REST API with a React client in front of it.
+Everything shown here comes from the deployed app.
+
+2
+00:00:08,000 --> 00:00:22,000
+The API takes a start and a finish in the USA.
+It answers with the driving route as GeoJSON, the cost-optimal fuel stops for a
+500 mile, 10 MPG truck, and the total fuel cost.
+
+3
+00:00:22,000 --> 00:00:36,000
+New York to Los Angeles: twelve stops, 681 dollars and 41 cents.
+The first request goes upstream to OSRM. The repeat comes from the cache,
+so it makes no upstream call and answers in 73 milliseconds.
+
+4
+00:00:36,000 --> 00:00:52,000
+The route runs 2,775 miles across the country.
+This map is drawn from the coordinates the API returned,
+with the numbered pins at the stations it chose to buy from.
+
+5
+00:00:52,000 --> 00:01:06,000
+Every row is one entry from the response: the station, what it charged,
+the gallons bought, and what that leg cost.
+
+6
+00:01:06,000 --> 00:01:20,000
+Place names resolve from a bundled gazetteer, so a request makes no geocoding call.
+One routing call gives the geometry, and the stops are matched against that corridor.
+Fuel is a minimum-cost problem, so the solver buys just enough to reach the first
+cheaper station within range, and fills the tank only when there is none.
+
+7
+00:01:20,000 --> 00:01:32,000
+The repository splits the same way: the Django project, the API app,
+the React client, the offline data, and the scripts that build it.
+
+8
+00:01:32,000 --> 00:01:46,000
+The endpoint itself is thin. It validates the request, hands both locations to the
+planner, and returns the payload along with the cache and latency headers.
+
+9
+00:01:46,000 --> 00:02:02,000
+The solver walks the stops with a 500 mile horizon.
+At each one it buys just enough to reach the first cheaper station in range,
+or fills the tank if there is none. The tests check that against an exhaustive search.
+
+10
+00:02:02,000 --> 00:02:14,000
+The client posts the two place names and renders what comes back:
+the map, the cost summary and the manifest.
+
+11
+00:02:14,000 --> 00:02:24,000
+Seventy tests cover the solver, the station matching, the geocoding and the API.
+None of them need the network or any API key.
+
+12
+00:02:24,000 --> 00:02:34,000
+Both halves are deployed and public. The client is at spotter-fuel-route-web,
+the API at spotter-fuel-route. Thanks for watching.
