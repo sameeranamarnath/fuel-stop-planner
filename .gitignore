@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Django
+db.sqlite3
+db.sqlite3-journal
+staticfiles/
+media/
+schema.yml
+
+# Local env and logs
+.env
+*.log
+
+# Web client
+node_modules/
+web/dist/
+
+# Vercel CLI link
+.vercel/

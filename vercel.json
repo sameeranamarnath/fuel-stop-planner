@@ -1,0 +1,11 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "django",
+  "regions": ["iad1"],
+  "buildCommand": "export SPOTTER_DB_PATH=db.sqlite3 && python manage.py migrate --noinput && python manage.py load_fuel_prices && python manage.py collectstatic --noinput",
+  "functions": {
+    "config/wsgi.py": {
+      "maxDuration": 60
+    }
+  }
+}

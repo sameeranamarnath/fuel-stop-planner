@@ -1,0 +1,21 @@
+# Nothing here is read by the running app, so it is left out of the function bundle.
+postman/
+.github/
+*.md
+.gitignore
+
+# Machine state.  The database is rebuilt inside the Vercel build (see buildCommand in
+# vercel.json), so the local copy is never uploaded.
+db.sqlite3
+db.sqlite3-journal
+staticfiles/
+
+# Secrets.  The CLI upload is not filtered by .gitignore, so .env has to be named here or a
+# token could end up inside the deployment bundle.
+.env
+
+# Python bytecode and virtualenvs
+__pycache__/
+*.py[cod]
+.venv/
+venv/

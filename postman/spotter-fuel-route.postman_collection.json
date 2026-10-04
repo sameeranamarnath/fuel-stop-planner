@@ -1,0 +1,154 @@
+{
+  "info": {
+    "name": "Spotter Fuel Route Planner",
+    "description": "Fuel-route optimizer API: route GeoJSON, cost-optimal fuel stops (500 mi range, 10 MPG) and the total fuel cost.\n\nSet `base_url` to wherever the API runs (default http://127.0.0.1:8000).\nWatch the headers on each plan request:\n  X-Upstream-Calls  - upstream routing calls made by this request (0 when cached)\n  X-Cache      - HIT or MISS\n  X-Latency-Ms - server-side handling time",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [{ "key": "base_url", "value": "http://127.0.0.1:8000" }],
+  "item": [
+    {
+      "name": "01 · Health",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{base_url}}/api/v1/health/", "host": ["{{base_url}}"], "path": ["api", "v1", "health", ""] },
+        "description": "Liveness plus the configuration the planner is running with."
+      }
+    },
+    {
+      "name": "02 · Readiness",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{base_url}}/api/v1/ready/", "host": ["{{base_url}}"], "path": ["api", "v1", "ready", ""] },
+        "description": "503 until the fuel-price catalogue has been imported."
+      }
+    },
+    {
+      "name": "03 · Plan: place names (cold)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "pm.test('one upstream routing call', () => pm.expect(pm.response.headers.get('X-Upstream-Calls')).to.eql('1'));",
+              "pm.test('cache MISS', () => pm.expect(pm.response.headers.get('X-Cache')).to.eql('MISS'));",
+              "const b = pm.response.json();",
+              "pm.test('never more than 500 miles between stops', () => {",
+              "  const m = [0, ...b.fuel_stops.map(s => s.distance_from_start_miles), b.summary.total_distance_miles];",
+              "  const gaps = m.slice(1).map((v, i) => v - m[i]);",
+              "  pm.expect(Math.max(...gaps)).to.be.at.most(500.5);",
+              "});",
+              "pm.test('total equals the sum of the stops', () => {",
+              "  const sum = b.fuel_stops.reduce((t, s) => t + s.cost_usd, 0);",
+              "  pm.expect(Math.abs(sum - b.summary.total_fuel_cost_usd)).to.be.below(0.05);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"start\": \"New York, NY\",\n  \"finish\": \"Los Angeles, CA\"\n}" },
+        "url": { "raw": "{{base_url}}/api/v1/fuel-plan/", "host": ["{{base_url}}"], "path": ["api", "v1", "fuel-plan", ""] },
+        "description": "Place names resolve from the bundled US gazetteer, so this costs one routing call."
+      }
+    },
+    {
+      "name": "04 · Plan: same route again (cache HIT)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('zero upstream calls', () => pm.expect(pm.response.headers.get('X-Upstream-Calls')).to.eql('0'));",
+              "pm.test('cache HIT', () => pm.expect(pm.response.headers.get('X-Cache')).to.eql('HIT'));",
+              "pm.test('served in well under a second', () => pm.expect(Number(pm.response.headers.get('X-Latency-Ms'))).to.be.below(1000));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"start\": \"New York, NY\",\n  \"finish\": \"Los Angeles, CA\"\n}" },
+        "url": { "raw": "{{base_url}}/api/v1/fuel-plan/", "host": ["{{base_url}}"], "path": ["api", "v1", "fuel-plan", ""] },
+        "description": "Send 03 twice in a row: the second call is served entirely from the database."
+      }
+    },
+    {
+      "name": "05 · Plan: explicit coordinates",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"start\": { \"lat\": 40.7128, \"lon\": -74.006 },\n  \"finish\": { \"lat\": 34.0522, \"lon\": -118.2437 }\n}"
+        },
+        "url": { "raw": "{{base_url}}/api/v1/fuel-plan/", "host": ["{{base_url}}"], "path": ["api", "v1", "fuel-plan", ""] },
+        "description": "Coordinates skip geocoding entirely; still exactly one upstream routing call."
+      }
+    },
+    {
+      "name": "06 · Error: location not found (422)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"start\": \"Nowhere, ZZ\",\n  \"finish\": \"Atlantis, ZZ\"\n}" },
+        "url": { "raw": "{{base_url}}/api/v1/fuel-plan/", "host": ["{{base_url}}"], "path": ["api", "v1", "fuel-plan", ""] },
+        "description": "Typed error contract: {error: {code, detail}}. Also try a start/finish with no valid number of stops to see 409."
+      }
+    },
+    {
+      "name": "07 · Station catalogue",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/api/v1/stations/?state=TX&max_price=3.00&limit=10",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "stations", ""],
+          "query": [
+            { "key": "state", "value": "TX" },
+            { "key": "max_price", "value": "3.00" },
+            { "key": "limit", "value": "10" }
+          ]
+        },
+        "description": "Spot-check the imported prices."
+      }
+    },
+    {
+      "name": "08 · OpenAPI schema",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{base_url}}/api/v1/schema/", "host": ["{{base_url}}"], "path": ["api", "v1", "schema", ""] }
+      }
+    },
+    {
+      "name": "09 · Swagger UI (open in browser)",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{base_url}}/api/v1/docs/", "host": ["{{base_url}}"], "path": ["api", "v1", "docs", ""] }
+      }
+    },
+    {
+      "name": "10 · Map preview (open in browser)",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/api/v1/map/?start=New%20York,%20NY&finish=Los%20Angeles,%20CA&auto=1",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "map", ""],
+          "query": [
+            { "key": "start", "value": "New York, NY" },
+            { "key": "finish", "value": "Los Angeles, CA" },
+            { "key": "auto", "value": "1" }
+          ]
+        },
+        "description": "Shareable Leaflet view of the route and the chosen fuel stops."
+      }
+    }
+  ]
+}
+

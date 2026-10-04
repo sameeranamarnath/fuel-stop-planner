@@ -1,0 +1,21 @@
+services:
+  api:
+    build: .
+    image: spotter-fuel-route:latest
+    ports:
+      - "8000:8000"
+    environment:
+      DJANGO_SECRET_KEY: compose-demo-secret
+      DJANGO_DEBUG: "True"
+      DJANGO_ALLOWED_HOSTS: "*"
+      # Vehicle + planner knobs (all optional - these are the defaults)
+      SPOTTER_MPG: "10"
+      SPOTTER_MAX_RANGE_MILES: "500"
+      SPOTTER_STATION_OFFSET_MILES: "25"
+      # The web client calls this API from its own origin.
+      DJANGO_CORS_ALLOWED_ORIGINS: "http://localhost:5173"
+      # Swap to OpenRouteService by setting these:
+      # SPOTTER_ROUTING_PROVIDER: ors
+      # SPOTTER_GEOCODING_PROVIDER: ors
+      # ORS_API_KEY: your-key-here
+    restart: unless-stopped

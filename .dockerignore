@@ -1,0 +1,15 @@
+.git
+.github
+.gitignore
+.venv
+venv
+node_modules
+web
+__pycache__
+*.py[cod]
+db.sqlite3
+db.sqlite3-journal
+staticfiles/
+.env
+*.log
+README.md
