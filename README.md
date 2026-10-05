@@ -1,4 +1,4 @@
-# Spotter — Fuel Route Planner
+# Fuel Stop Planner
 
 Give the API a start and a finish in the USA and it returns the driving route as GeoJSON, the
 cost-optimal set of fuel stops for a vehicle with a 500-mile range doing 10 MPG, and the total
